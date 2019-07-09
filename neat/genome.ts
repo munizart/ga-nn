@@ -1,7 +1,7 @@
 import { Connection, mutateConnection } from "./connection";
 import { GeneticNode, mutateNode } from "./genetic-node";
-import { ValueFrom } from "./types/ValueFrom";
-import { pickRandom, range, int } from "./rand/rand";
+import { ValueFrom } from "../types/ValueFrom";
+import { pickRandom, int, intRange } from '../rand/rand';
 
 
 export interface Genome<
@@ -42,7 +42,11 @@ function getConnectionMatrix(genome: Genome<any, any>) {
 }
 
 export type GenomeMutation = ValueFrom<typeof genomeMutations>
-export function mutateGenome<I extends number, O extends number>(mutation: GenomeMutation, originalGenome: Genome<I, O>): Genome<I, O> {
+export function mutateGenome<I extends number, O extends number>(mutation: GenomeMutation | 'skip', originalGenome: Genome<I, O>): Genome<I, O> {
+  if (mutation === "skip") {
+    return originalGenome
+  }
+
   const genome: Genome<I, O> = JSON.parse(JSON.stringify(originalGenome))
 
   if (mutation === 'ADD_CONN') {
@@ -70,11 +74,13 @@ export function mutateGenome<I extends number, O extends number>(mutation: Genom
   }
 
   if (mutation === 'MOD_BIAS' || mutation === 'MOD_ACTV') {
-    const index = range(genome.inputs, genome.nodes.length)
+    const index = intRange(genome.inputs, genome.nodes.length)
+    const newNode = mutateNode(mutation, genome.nodes[index])
+
     genome.nodes.splice(
       index,
       1,
-      mutateNode(mutation, genome.nodes[index])
+      newNode
     )
     return genome
   }
@@ -140,14 +146,14 @@ export function mutateGenome<I extends number, O extends number>(mutation: Genom
 
     // Select a node which isn't an input or output node
     const hiddens = genome.nodes.length - genome.outputs - genome.inputs
-    const index = range(genome.inputs, hiddens)
+    const index = intRange(genome.inputs, hiddens)
     const node = genome.nodes[index]
-    
+
     var connectionsMapping = getConnectionMatrix(genome)
     genome.connections = genome.connections.concat(genome.connections
-      
+
       .filter(({ to }) => to === node.id) // inputs of this node
-      
+
       .flatMap(({ from }) => {
         return genome.connections
           .filter(({ from }) => from === node.id) // outputs of this node

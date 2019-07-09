@@ -1,0 +1,11 @@
+{
+  "name": "ga-nn",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:munizart/ga-nn",
+  "author": "Artur Muniz <munizart_dev@hotmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^12.6.1"
+  }
+}

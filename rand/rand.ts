@@ -4,7 +4,7 @@ export function random (seed: number) : number {
   return x - Math.floor(x);
 }
 
-let seed = 1.8765111159192828
+let seed = Math.random()
 export function rndm () {
   seed = random(seed)
   return seed
@@ -18,7 +18,8 @@ export function range (min = 0, max = 0xfffffff, random = rndm) {
   return random() * (max - min) + min
 }
 
-export function intRange (min = 0, max = 0xfffffff, random = rndm) {
+export function intRange (min = 0, max = 0xffffffe, random = rndm) {
+  max = max + 1
   return int(max - min, random) + min;
 }
 

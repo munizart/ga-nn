@@ -20,7 +20,7 @@ export function mutateConnection (mutation: ConnectionMutation, connection: Conn
   if (mutation === 'MOD_WEIGHT') {
     return {
       ...connection,
-      weight: connection.weight + range(-1, 1)
+      weight: connection.weight + range(-0.3, 0.3)
     }
   }
 

@@ -1,6 +1,6 @@
-import { ValueFrom } from "./types/ValueFrom";
-import { allActivations } from "./neuron/activation";
-import { pickRandom, range } from "./rand/rand";
+import { ValueFrom } from "../types/ValueFrom";
+import { allActivations } from "../neuron/activation";
+import { pickRandom, range } from "../rand/rand";
 
 export interface GeneticNode {
   bias: number
