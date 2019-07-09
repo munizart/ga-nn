@@ -1,0 +1,1 @@
+export type ValueFrom<A extends ArrayLike<any>> = A[number]
