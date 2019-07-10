@@ -1,13 +1,10 @@
-import { Connection, mutateConnection } from "./connection";
+import { Connection, mutateConnection } from './connection';
 import { GeneticNode, mutateNode } from "./genetic-node";
 import { ValueFrom } from "../types/ValueFrom";
-import { pickRandom, int, intRange } from '../rand/rand';
+import { pickRandom, int, range } from '../rand/rand';
 
 
-export interface Genome<
-  Inputs extends number,
-  Outputs extends number
-  > {
+export interface Genome {
   inputs: number
   outputs: number
 
@@ -15,10 +12,10 @@ export interface Genome<
   nodes: GeneticNode[]
 }
 
-export const genomeMutationsNames: [
+export const genomeMutations : [
   'ADD_NODE', 'REM_NODE',
   'MOD_BIAS', 'MOD_ACTV',
-  'ADD_CONN', 'REM_CONN',
+  //'ADD_CONN', 'REM_CONN',
   'MOD_WEIGHT'
 ] = [
     //nodes
@@ -26,24 +23,12 @@ export const genomeMutationsNames: [
     'MOD_BIAS', 'MOD_ACTV',
 
     //connections
-    'ADD_CONN', 'REM_CONN',
+    //'ADD_CONN', 'REM_CONN',
     'MOD_WEIGHT',
   ]
 
-export const genomeMutations : [string, number][] = [
-  //nodes
-  ['ADD_NODE', 7],
-  ['REM_NODE', 5],
-  ['MOD_BIAS', 14],
-  ['MOD_ACTV', 10],
 
-  //connections
-  ['ADD_CONN', 10],
-  ['REM_CONN', 10],
-  ['MOD_WEIGHT', 14],
-]
-
-function getConnectionMatrix(genome: Genome<any, any>) {
+function getConnectionMatrix(genome: Genome) {
   return genome.connections.reduce(
     (acc: boolean[][], { to, from }) => {
       acc[from] = acc[from] || []
@@ -54,32 +39,26 @@ function getConnectionMatrix(genome: Genome<any, any>) {
   )
 }
 
-export type GenomeMutation = ValueFrom<typeof genomeMutationsNames>
-export function mutateGenome<I extends number, O extends number>(mutation: GenomeMutation, originalGenome: Genome<I, O>): Genome<I, O> {
-  const genome: Genome<I, O> = JSON.parse(JSON.stringify(originalGenome))
+export type GenomeMutation = ValueFrom<typeof genomeMutations>
+
+export function mutateGenome(mutation: GenomeMutation, originalGenome: Genome): Genome {
+  const genome: Genome = JSON.parse(JSON.stringify(originalGenome))
 
   if (mutation === 'ADD_CONN') {
     var connectionsMapping = getConnectionMatrix(genome)
     var available = genome.nodes
       .filter(node => !(node.type === 'output'))  // output dosen't have outgoing connections
-      .flatMap(({ id: id1 }, index) => {
+      .flatMap(({ id: id1 }) => {
         return genome.nodes
           .flatMap(({ id: id2 }) => {
-            try {
-              const isConnected = connectionsMapping[id1] && connectionsMapping[id1][id2]
-              if (!isConnected && id1 !== id2) { // no self connections
-                return [[id1, id2]]
-              }
-            } catch (e) {
-              debugger
-            }
-            return []
+            const isConnected = connectionsMapping[id1] && connectionsMapping[id1][id2]
+            const isSame = id1 === id2
+            const isAvailable = !isConnected && !isSame
+            return isAvailable ? [[id1, id2]] : []
           })
       })
 
-    console.info('availables connection to ADD:', available)
     if (available.length === 0) {
-      console.warn('No more connections to be made!')
       return genome
     }
 
@@ -90,32 +69,47 @@ export function mutateGenome<I extends number, O extends number>(mutation: Genom
   }
 
   if (mutation === 'MOD_BIAS' || mutation === 'MOD_ACTV') {
-    const index = intRange(genome.inputs, genome.nodes.length - 1)
-    const newNode = mutateNode(mutation, genome.nodes[index])
-
-    genome.nodes.splice(
-      index,
-      1,
-      newNode
+    const node = pickRandom(
+      genome.nodes.filter(node => node.type !== 'input')
     )
+    const index = genome.nodes.indexOf(node)
+    if (index > -1 && node) {
+      genome.nodes.splice(
+        index,
+        1,
+        mutateNode(mutation, node)
+      )
+    }
     return genome
 
   }
 
   if (mutation === 'ADD_NODE') {
-    const connection = pickRandom(genome.connections)
+    function findConnection (from, to) {
+      return genome.connections.find(connection => connection.from === from && connection.to === to)
+    }
+
+    function connect(from, to) {
+      const conn = findConnection(from, to)
+      if (conn) {
+        conn.enabled = true
+      } else {
+        genome.connections.push(Connection(from, to, true))
+      }
+    }
+
+    const connection = pickRandom(genome.connections.filter(c => c.enabled))
     connection.enabled = false
 
     const toIndex = genome.nodes.findIndex(({ id }) => id === connection.to)
     const node = GeneticNode(Math.max(...genome.nodes.map(x => x.id)) + 1, 'hidden')
 
     const minBound = Math.min(toIndex, genome.nodes.length - genome.outputs)
+
     genome.nodes.splice(minBound, 0, node)
 
-    genome.connections.push(
-      Connection(connection.from, node.id, true),
-      Connection(node.id, connection.to, true)
-    )
+    connect(connection.from, node.id)
+    connect(node.id, connection.to)
 
     return genome
   }
@@ -146,7 +140,7 @@ export function mutateGenome<I extends number, O extends number>(mutation: Genom
     )
 
     if (!posibilities.length) {
-      console.warn('No more connections to remove')
+      return genome
     } else {
       genome.connections.splice(
         genome.connections.indexOf(pickRandom(posibilities)),
@@ -157,9 +151,11 @@ export function mutateGenome<I extends number, O extends number>(mutation: Genom
   }
 
   if (mutation === 'REM_NODE') {
+    if (range(0, 1) < .9) {
+      return genome
+    }
     const nodes = genome.nodes.filter(node => node.type === 'hidden')
     if (nodes.length < 1) {
-      console.warn('No more nodes left to remove! aborting mutation')
       return genome
     }
 
@@ -188,7 +184,6 @@ export function mutateGenome<I extends number, O extends number>(mutation: Genom
       })
     )
 
-    console.log('removing node with type:', node.type, node)
     // finally remove the node
     genome.nodes.splice(genome.nodes.indexOf(node), 1)
     return genome
@@ -197,7 +192,7 @@ export function mutateGenome<I extends number, O extends number>(mutation: Genom
   throw TypeError(`Unsuported genome mutation: ${mutation}`)
 }
 
-export function Genome<I extends number, O extends number>(inputs: I, outputs: O): Genome<I, O> {
+export function Genome(inputs: number, outputs: number) {
   const nodes = Array.from({
     length: inputs as any + outputs as any
   }, (_: any, id: number) => GeneticNode(id, id < inputs ? 'input' : 'output'))

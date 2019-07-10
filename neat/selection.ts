@@ -1,93 +1,63 @@
-import { Genome, mutateGenome, genomeMutations, genomeMutationsNames } from "./genome";
-import { range, pickRandom, intRange } from "../rand/rand";
+import { Genome, mutateGenome, genomeMutations } from "./genome";
+import { range, pickRandom } from "../rand/rand";
 import { SelectionData, crossover } from "./crossover";
+import { FitnessFunction } from './fitness';
 
-interface EvolutionOptions {
+import rouletteWheelSelection from 'roulette-wheel-selection'
+
+interface EvolutionOptions <I extends number = number, O extends number = number> {
   elitism: number
-  mutationRate: number
-  mutationAmout: number
-  popSize?: number
   maxGenerations: number
-  fitnessFunction: <I extends number, O extends number>(a: Genome<I,O>) => number
+  mutationAmout: number
+  mutationRate: number
+  popSize?: number
+  targetError: number
+  fitnessFunction: FitnessFunction<I,O>
 }
 const compare = (a: any, b: any) => {
-  return a.fitness - b.fitness // the greatest the number, the most fit.
+  return b.fitness - a.fitness // the greatest the number, the most fit.
 }
 
-const dataFrom = ({ fitnessFunction } : EvolutionOptions) => (genome : Genome<any,any>) => ({
-  fitness: fitnessFunction(genome),
+const dataFrom = ({ fitnessFunction } : EvolutionOptions, g = 1) => (genome : Genome) => ({
+  fitness: fitnessFunction(genome, g),
   genome
-})
+}) as SelectionData
 
-export async function breed<
-  I extends number,
-  O extends number
->(
-  population: Genome<I,O>[],
-  options: EvolutionOptions
-) : Promise<Genome<I,O>[]> {
-  console.time('populationWithData')
+export async function breed(population: Genome[], options: EvolutionOptions) : Promise<Genome[]> {
   const populationWithData = population.map(dataFrom(options)).sort(compare)
-  console.timeEnd('populationWithData')
 
   await nextTick()
-  
-  console.time('selection')
+
   const elite = population.slice(0, options.elitism)
   const mating_pool = select(populationWithData, population.length - options.elitism + 1)
-  if (elite.length + mating_pool.length !== populationWithData.length + 1) {
-    console.log(elite.length, mating_pool.length, populationWithData.length)
-    process.exit()
-  }
-  await nextTick()
-  console.timeEnd('selection')
 
-  console.log('fitness: %s', populationWithData[0].fitness)
+  await nextTick()
 
   const newBread = mating_pool
     .slice(0, -1)
     .map((g1, i) => {
       const g2 = mating_pool[i + 1]
+      if (!g1 || !g2) {
+        debugger
+      }
       return crossover(g1, g2)
     })
     .map(mutate(options.mutationRate, options.mutationAmout))
-  
+
   await nextTick()
-  
-  const newPop = elite.concat(newBread)
-  if (newPop.length !== populationWithData.length) {
-    console.log('>', elite.length, mating_pool.length, populationWithData.length)
-    process.exit()
-  }
+  return elite.concat(newBread)
 }
 
-function select (popData: SelectionData<any,any>[], count: number, skip?: SelectionData<any,any>) : SelectionData<any, any>[] {
-  if (count === 0 || popData.length === 0) {
-    return []
-  } else {
-    const totalFitness = popData.reduce(
-      (totalFitness, { fitness }) => fitness + totalFitness,
-      0
-    )
-    let credits = range(0, totalFitness)
-    let i = -1
-    while (credits < 0) {
-      i++
-      credits = credits - popData[i].fitness
+function select (popData: SelectionData[], count: number, skip?: SelectionData) : SelectionData[] {
+  const getParent = () => rouletteWheelSelection(popData, 'fitness')
+  const s = []
+  while (s.length < count) {
+    const chossen = getParent()
+    if (chossen) {
+      s.push(chossen)
     }
-    if (i >= popData.length) {
-      i = popData.length - 1
-    }
-
-    const chossen = popData[i]
-
-    popData.splice(i, 1)
-    if (skip) {
-      popData.push(skip)
-    }
-
-    return [chossen, ...select(popData, count -1, chossen)]
   }
+  return s
 }
 
 
@@ -97,43 +67,47 @@ export async function evolve<
 >(
   inputs: I,
   outputs: O,
-  options: EvolutionOptions
+  options: EvolutionOptions<I, O>
 ) {
-  console.log('starting evolution.', ...Object.entries(options).flat())
+  console.log('Starting evolution.\n', ...Object.entries(options).flat())
+  console.time('evolve cycle')
   const fistGen = Array.from({
     length: options.popSize || 20
   }, () => Genome(inputs, outputs))
-  
+
+
   await nextTick()
   let pop = fistGen
-  while(options.maxGenerations--) {
-    console.log('Starting %s', options.maxGenerations+1)
+  let gen = 1
+  while(gen <= options.maxGenerations) {
     pop = await breed(pop, options)
-    await nextTick()
-    console.log('breed %s; %s generations to go', pop.length, options.maxGenerations, pop)
-  }
 
-  return pop.map(dataFrom(options)).sort(compare).shift()
+    const champion = pop.map(dataFrom(options, 0)).sort(compare).shift()
+    gen++
+    if (champion && (-champion.fitness <= options.targetError)) {
+      console.log('target error reached. breaking.')
+      break
+    }
+  }
+  console.timeEnd('evolve cycle')
+  console.log('Evolution endend after %s generations', gen)
+
+  const data = pop.map(dataFrom(options, 0)).sort(compare).shift()
+  data.generations = gen
+  return data
 }
 
-const mutate = (mutationRate: number, mutationAmout: number) => function (genome: Genome<any, any>) : Genome<any, any> {
+const mutate = (mutationRate: number, mutationAmout: number) => function (genome: Genome) : Genome {
   if (mutationRate < range(0, 1)) {
     while(mutationAmout-- > 0) {
-      const total = genomeMutations.reduce((c, [, a]) => c + a, 0)
-      let i = 0
-      let credits = range(0, total)
-      while (credits > 0) {
-        credits -= genomeMutations[i][1]
-        i++
-      }
-      const mutationName = genomeMutationsNames[i]
+
+      const mutationName = pickRandom(genomeMutations)
       if (mutationName) {
-        console.info('mutating node, %s', mutationName)
         genome = mutateGenome(mutationName, genome)
       }
     }
   }
-  
+
   return genome
 }
 

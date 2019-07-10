@@ -4,12 +4,12 @@ import { Genome } from './genome';
 
 const copy = <T>(x: T) => JSON.parse(JSON.stringify(x)) as T
 
-export interface SelectionData<I extends number, O extends number> {
-  genome: Genome<I, O>
+export interface SelectionData {
+  genome: Genome
   fitness: number
 }
 
-export function crossover <I extends number, O extends number>(parentAData: SelectionData<I,O>, parentBData: SelectionData<I,O>) : Genome<I,O> {
+export function crossover (parentAData: SelectionData, parentBData: SelectionData) : Genome {
   // be sure that A's fitnness is GTE than B's
   if (parentBData.fitness > parentAData.fitness) {
     return crossover (parentBData, parentAData)

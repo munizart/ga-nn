@@ -27,3 +27,4 @@ export function pickRandom<T>(from: T[], random = rndm) : T {
   return from[intRange(0, from.length - 1, random)]
 }
 
+Math.random = rndm
