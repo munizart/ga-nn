@@ -1,6 +1,6 @@
-import { Genome } from '../dist/neat/genome';
-import { Connection } from '../dist/neat/connection';
+import { Connection } from './connection';
 import { intRange } from '../rand/rand';
+import { Genome } from './genome';
 
 const copy = <T>(x: T) => JSON.parse(JSON.stringify(x)) as T
 
@@ -30,4 +30,13 @@ export function crossover <I extends number, O extends number>(parentAData: Sele
     }
   })
 
+  if (parentAData.fitness === parentBData.fitness) {
+    child.connections.push(
+      ...parentBData.genome.connections.filter(
+        ({innovation}) => !child.connections.find(c => c.innovation === innovation)
+      )
+    )
+  }
+
+  return child
 }

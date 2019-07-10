@@ -6,6 +6,10 @@
   "author": "Artur Muniz <munizart_dev@hotmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@types/node": "^12.6.1"
+    "@types/d3": "^5.7.2",
+    "@types/node": "^12.6.1",
+    "babel-polyfill": "^6.26.0",
+    "d3": "^5.9.7",
+    "neataptic": "^1.4.7"
   }
 }

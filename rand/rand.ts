@@ -4,7 +4,7 @@ export function random (seed: number) : number {
   return x - Math.floor(x);
 }
 
-let seed = Math.random()
+let seed = 10
 export function rndm () {
   seed = random(seed)
   return seed
@@ -24,6 +24,6 @@ export function intRange (min = 0, max = 0xffffffe, random = rndm) {
 }
 
 export function pickRandom<T>(from: T[], random = rndm) : T {
-  return from[intRange(0, from.length, random)]
+  return from[intRange(0, from.length - 1, random)]
 }
 
