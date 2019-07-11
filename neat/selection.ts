@@ -35,12 +35,11 @@ export async function breed(population: SelectionData[], options: EvolutionOptio
   const newBread = mating_pool
     .slice(0, -1)
     .map((g1, i) => {
-      /* const g2 = mating_pool[i + 1]
+      const g2 = mating_pool[i + 1]
       if (!g1 || !g2) {
-        debugger
+        throw Error('debug')
       }
-      return crossover(g1, g2) */
-      return g1.genome
+      return crossover(g1, g2)
     })
     .map(mutate(options.mutationRate, options.mutationAmout))
 
@@ -78,11 +77,11 @@ export async function evolve<
 
   await nextTick()
   let pop = fistGen
-  let gen = 1
+  let gen = 0
   while(gen <= options.maxGenerations) {
+    gen++
     const populationWithData = pop.map(dataFrom(options, 1)).sort(compare)
     pop = await breed(populationWithData, options)
-    gen++
 
     const champion = populationWithData[0]
 

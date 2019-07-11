@@ -14,7 +14,7 @@ const trainSet : any = [
   { input: [1,0], output: [1] },
   { input: [1,1], output: [0] },
 ] */
-const fitnessFunction = fitnessForData(1.01, trainSet)
+const fitnessFunction = fitnessForData(-0.01, trainSet)
 const options = {
   elitism: 0,
   popSize: 200,

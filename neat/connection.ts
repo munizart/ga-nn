@@ -1,7 +1,9 @@
 import { ValueFrom } from "../types/ValueFrom";
 import { range } from "../rand/rand";
 
-let innovation = 0
+let globalInnovation = 0
+
+const innovationMap = new Map<string, number>()
 
 export interface Connection {
   from: number
@@ -28,11 +30,19 @@ export function mutateConnection (mutation: ConnectionMutation, connection: Conn
 }
 
 export function Connection (from: number, to: number, enabled: boolean) : Connection {
+  const tag = `${from}->${to}`
+  let innovation
+  if (innovationMap.has(tag)) {
+    innovation = innovationMap.get(tag) as number
+  } else {
+    innovation = globalInnovation++
+    innovationMap.set(tag, innovation)
+  }
   return {
     enabled,
     from,
     to,
-    innovation: innovation++,
+    innovation,
     weight: range(-1, 1),
   }
 }

@@ -19,12 +19,12 @@ export const genomeMutations : [
   'MOD_WEIGHT'
 ] = [
     //nodes
-    'ADD_NODE', //'REM_NODE',
-    //'MOD_BIAS', 'MOD_ACTV',
+    'ADD_NODE', 'REM_NODE',
+    'MOD_BIAS', 'MOD_ACTV',
 
     //connections
-    //'ADD_CONN', //'REM_CONN',
-    //'MOD_WEIGHT',
+    'ADD_CONN', 'REM_CONN',
+    'MOD_WEIGHT',
   ]
 
 
@@ -50,10 +50,12 @@ export function mutateGenome(mutation: GenomeMutation, originalGenome: Genome): 
       .filter(node => !(node.type === 'output'))  // output dosen't have outgoing connections
       .flatMap(({ id: id1 }) => {
         return genome.nodes
-          .flatMap(({ id: id2 }) => {
+          .flatMap(({ id: id2, type }) => {
+            const isInput = type === 'input' // input dosen't have incooming connections
             const isConnected = connectionsMapping[id1] && connectionsMapping[id1][id2]
+            const isReflexive = connectionsMapping[id2] && connectionsMapping[id2][id1]
             const isSame = id1 === id2
-            const isAvailable = !isConnected && !isSame
+            const isAvailable = !isConnected && !isSame && !isInput && !isReflexive
             return isAvailable ? [[id1, id2]] : []
           })
       })
