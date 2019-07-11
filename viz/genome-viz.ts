@@ -14,7 +14,7 @@ export function printGenome(selector, genome: Genome) {
   // set the dimensions and margins of the graph
   const margin = { top: 10, right: 30, bottom: 30, left: 40 }
   const width = window.innerWidth - margin.left - margin.right
-  const height = 400 - margin.top - margin.bottom
+  const height = window.innerHeight - margin.top - margin.bottom
 
   var catScale = d3.scalePoint()
     .domain(['input', 'hidden', 'output'].reverse())
@@ -85,7 +85,7 @@ export function printGenome(selector, genome: Genome) {
         return 0.12
       })
     )
-    .force("charge", d3.forceManyBody().strength(-3450))         // This adds repulsion between nodes. Play with the -400 for the repulsion strength
+    .force("charge", d3.forceManyBody().strength(-1000))         // This adds repulsion between nodes. Play with the -400 for the repulsion strength
     .force("center", d3.forceCenter(width / 2, height / 2))     // This force attracts nodes to the center of the svg area
     .force("y", d3.forceY(d => catScale(d.type)).strength(1))
     .on("tick", ticked)

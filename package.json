@@ -7,13 +7,16 @@
   "license": "MIT",
   "dependencies": {
     "@types/d3": "^5.7.2",
+    "@types/lodash": "^4.14.136",
     "@types/node": "^12.6.1",
     "babel-polyfill": "^6.26.0",
     "d3": "^5.9.7",
+    "lodash": "^4.17.14",
     "neataptic": "^1.4.7",
     "roulette-wheel-selection": "^1.0.3"
   },
   "devDependencies": {
+    "cssnano": "^4.1.10",
     "typescript": "^3.5.3"
   }
 }

@@ -15,16 +15,16 @@ export interface Genome {
 export const genomeMutations : [
   'ADD_NODE', 'REM_NODE',
   'MOD_BIAS', 'MOD_ACTV',
-  //'ADD_CONN', 'REM_CONN',
+  'ADD_CONN', 'REM_CONN',
   'MOD_WEIGHT'
 ] = [
     //nodes
-    'ADD_NODE', 'REM_NODE',
-    'MOD_BIAS', 'MOD_ACTV',
+    'ADD_NODE', //'REM_NODE',
+    //'MOD_BIAS', 'MOD_ACTV',
 
     //connections
-    //'ADD_CONN', 'REM_CONN',
-    'MOD_WEIGHT',
+    //'ADD_CONN', //'REM_CONN',
+    //'MOD_WEIGHT',
   ]
 
 
@@ -151,9 +151,6 @@ export function mutateGenome(mutation: GenomeMutation, originalGenome: Genome): 
   }
 
   if (mutation === 'REM_NODE') {
-    if (range(0, 1) < .9) {
-      return genome
-    }
     const nodes = genome.nodes.filter(node => node.type === 'hidden')
     if (nodes.length < 1) {
       return genome

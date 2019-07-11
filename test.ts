@@ -4,30 +4,28 @@ import { fitnessForData } from './neat/fitness';
 import { evolve } from './neat/selection';
 import { decode } from './neat/decode';
 import { printGenome } from './viz/genome-viz';
+import trainSet from './data.json'
+import _ from 'lodash'
 
+/*
 const trainSet : any = [
   { input: [0,0], output: [0] },
   { input: [0,1], output: [1] },
   { input: [1,0], output: [1] },
   { input: [1,1], output: [0] },
-
-  { input: [0,0], output: [0] },
-  { input: [0,1], output: [1] },
-  { input: [1,0], output: [1] },
-  { input: [1,1], output: [0] },
-]
-const fitnessFunction = fitnessForData(0.01, trainSet)
+] */
+const fitnessFunction = fitnessForData(1.01, trainSet)
 const options = {
-  elitism: 4,
+  elitism: 0,
   popSize: 200,
   fitnessFunction,
-  maxGenerations: 1500,
-  mutationAmout: 1,
-  mutationRate: .01,
-  targetError: .005
+  maxGenerations: 1000,
+  mutationAmout: 4,
+  mutationRate: .4,
+  targetError: .02
 }
 
-evolve(2, 1, options).then(summary).catch(error => {
+evolve(4, 3, options).then(summary).catch(error => {
   console.error(error)
 })
 
@@ -39,10 +37,10 @@ function summary (data) {
   const network = decode(data.genome)
   const { error } = network.test(trainSet)
 
-  console.log(network.nodes.map(x => x.type))
+  console.log(JSON.stringify(data.genome))
 
-  trainSet.slice(0,4).forEach(({input, output}) => {
-    console.log(input, network.activate(input)[0].toFixed(4), output[0])
+  _.shuffle(trainSet).slice(0,4).forEach(({input, output}) => {
+    console.log(input, network.activate(input), output)
   })
 
   if (typeof window !== 'undefined') {

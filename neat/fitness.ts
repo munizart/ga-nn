@@ -8,9 +8,12 @@ export function fitnessForData<I extends number, O extends number>(growth: numbe
     try {
       const network = decode(genome)
       const { error } = network.test(data)
-      return - error + (network.nodes.length * growth * g)
+      if (g) {
+        return (genome.nodes.length + (genome.connections.length * 2))
+      }
+      return - error + ((genome.nodes.length + genome.connections.length) * growth * g)
     } catch {
-      return 0
+      return -1000 // dead
     }
 
   } as FitnessFunction<I, O>

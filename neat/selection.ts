@@ -14,6 +14,9 @@ interface EvolutionOptions <I extends number = number, O extends number = number
   targetError: number
   fitnessFunction: FitnessFunction<I,O>
 }
+
+let interrupt = false
+
 const compare = (a: any, b: any) => {
   return b.fitness - a.fitness // the greatest the number, the most fit.
 }
@@ -23,24 +26,21 @@ const dataFrom = ({ fitnessFunction } : EvolutionOptions, g = 1) => (genome : Ge
   genome
 }) as SelectionData
 
-export async function breed(population: Genome[], options: EvolutionOptions) : Promise<Genome[]> {
-  const populationWithData = population.map(dataFrom(options)).sort(compare)
+export async function breed(population: SelectionData[], options: EvolutionOptions) : Promise<Genome[]> {
 
   await nextTick()
-
   const elite = population.slice(0, options.elitism)
-  const mating_pool = select(populationWithData, population.length - options.elitism + 1)
-
-  await nextTick()
+  const mating_pool = select(population.slice(options.elitism), population.length - options.elitism + 1)
 
   const newBread = mating_pool
     .slice(0, -1)
     .map((g1, i) => {
-      const g2 = mating_pool[i + 1]
+      /* const g2 = mating_pool[i + 1]
       if (!g1 || !g2) {
         debugger
       }
-      return crossover(g1, g2)
+      return crossover(g1, g2) */
+      return g1.genome
     })
     .map(mutate(options.mutationRate, options.mutationAmout))
 
@@ -48,7 +48,7 @@ export async function breed(population: Genome[], options: EvolutionOptions) : P
   return elite.concat(newBread)
 }
 
-function select (popData: SelectionData[], count: number, skip?: SelectionData) : SelectionData[] {
+function select (popData: SelectionData[], count: number) : SelectionData[] {
   const getParent = () => rouletteWheelSelection(popData, 'fitness')
   const s = []
   while (s.length < count) {
@@ -80,20 +80,37 @@ export async function evolve<
   let pop = fistGen
   let gen = 1
   while(gen <= options.maxGenerations) {
-    pop = await breed(pop, options)
-
-    const champion = pop.map(dataFrom(options, 0)).sort(compare).shift()
+    const populationWithData = pop.map(dataFrom(options, 1)).sort(compare)
+    pop = await breed(populationWithData, options)
     gen++
-    if (champion && (-champion.fitness <= options.targetError)) {
-      console.log('target error reached. breaking.')
+
+    const champion = populationWithData[0]
+
+    const e = ({ fitness }) => fitness.toFixed(10)
+    const error = -dataFrom(options, 0)(champion.genome).fitness
+    const n = ({ genome }) => String(genome.nodes.length).padStart(2, ' ')
+    const c = ({ genome }) => String(genome.connections.length).padStart(2, ' ')
+
+    process.stdout.write(`\rGen# ${ gen } #1 ${e(champion)} n: ${n(champion)} c: ${c(champion)} ERROR: ${error}`)
+
+    if (error && (error <= options.targetError)) {
+      console.log('\ntarget error reached. breaking.')
+      break
+    }
+
+    if (interrupt) {
+      console.log('\ninterrupt')
       break
     }
   }
+  console.log('\n')
   console.timeEnd('evolve cycle')
   console.log('Evolution endend after %s generations', gen)
 
   const data = pop.map(dataFrom(options, 0)).sort(compare).shift()
   data.generations = gen
+
+  interrupt = false
   return data
 }
 
@@ -114,10 +131,12 @@ const mutate = (mutationRate: number, mutationAmout: number) => function (genome
 
 function nextTick () {
   return new Promise((res, rej) => {
-    if (typeof process !== 'undefined' && process.nextTick) {
-      process.nextTick(() => res())
-    } else if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(() => res())
-    }
+    setTimeout(() => res(), 0)
   })
 }
+
+
+process.addListener('SIGINT', () => {
+  console.log('sigterm')
+  interrupt = true
+})
